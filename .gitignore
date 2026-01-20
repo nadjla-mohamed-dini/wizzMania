@@ -1,0 +1,48 @@
+# Fichiers binaires et exécutables
+*.exe
+*.out
+*.app
+*.o
+*.obj
+*.pdb
+*.ilk
+*.log
+
+# Dossiers de build
+/build/
+/bin/
+/Debug/
+/Release/
+
+# Fichiers générés par CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.cbp
+*.user
+*.suo
+*.ncb
+*.sdf
+*.vcxproj*
+*.opensdf
+
+# Fichiers temporaires
+*.tmp
+*.temp
+*.log
+
+# Fichiers IDE (Visual Studio, CLion, etc.)
+.vscode/
+.idea/
+
+# Dossiers spécifiques au système
+.DS_Store
+Thumbs.db
+
+# Librairies externes si présentes
+/libs/
+
+
+aide.txt
+

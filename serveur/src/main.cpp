@@ -14,6 +14,7 @@ int main()
     }
 
     std::cout << "Serveur démarré sur le port " << PORT << "\n";
+
     serveur.attendreClient();
 
     return 0;

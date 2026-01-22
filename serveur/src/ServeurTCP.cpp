@@ -43,27 +43,58 @@ void ServeurTCP::attendreClient()
 
     std::cout << "Client connecté\n";
 
-    std::string brut = client.recevoir();
-    if (brut.empty())
-        return;
-
-    Message message = Message::depuisString(brut);
-
-    if (message.getType() == Message::Type::MESSAGE)
+    while (true)
     {
-        std::cout << "["
-                  << message.getAuteur()
-                  << "] "
-                  << message.getContenu()
-                  << "\n";
+        std::string brut = client.recevoir();
+
+        if (brut.empty())
+        {
+            std::cout << "Client déconnecté\n";
+            break;
+        }
+
+        Message message = Message::depuisString(brut);
+
+        switch (message.getType())
+        {
+        case Message::Type::CONNEXION:
+            std::cout << message.getAuteur()
+                      << " s'est connecté\n";
+            break;
+
+        case Message::Type::DECONNEXION:
+            std::cout << message.getAuteur()
+                      << " s'est déconnecté\n";
+            return;
+
+        case Message::Type::MESSAGE:
+            std::cout << "["
+                      << message.getAuteur()
+                      << "] "
+                      << message.getContenu()
+                      << "\n";
+            break;
+
+        case Message::Type::WIZZ:
+            std::cout << "*** WIZZ de "
+                      << message.getAuteur()
+                      << " ***\n";
+            break;
+
+        default:
+            std::cout << "Message inconnu reçu\n";
+            break;
+        }
+
+        // Accusé de réception
+        Message reponse(
+            Message::Type::MESSAGE,
+            "Serveur",
+            "OK"
+        );
+
+        client.envoyer(reponse.toString());
     }
-
-    // Exemple de réponse
-    Message reponse(
-        Message::Type::MESSAGE,
-        "Serveur",
-        "Message reçu"
-    );
-
-    client.envoyer(reponse.toString());
 }
+
+

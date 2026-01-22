@@ -1,48 +1,88 @@
-# Fichiers binaires et exécutables
-*.exe
-*.out
-*.app
-*.o
-*.obj
-*.pdb
-*.ilk
-*.log
 
-# Dossiers de build
+# WIZZ Mania
+
+
+
+# Dossiers de build / génération
+
 /build/
-/bin/
-/Debug/
-/Release/
+/build2/
+/build*/
+/cmake-build-*/
+/out/
 
-# Fichiers générés par CMake
+# Sorties CMake (si jamais générées hors build/)
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
+CTestTestfile.cmake
 Makefile
-*.cbp
-*.user
+Testing/
+
+
+# Binaires / artefacts C/C++
+
+*.exe
+*.dll
+*.lib
+*.a
+*.exp
+*.out
+*.app
+*.obj
+*.o
+*.iobj
+*.ipdb
+*.pdb
+*.ilk
+*.pch
+
+
+# Visual Studio / MSBuild
+
+.vs/
 *.suo
+*.user
 *.ncb
 *.sdf
-*.vcxproj*
 *.opensdf
+*.VC.db
+*.VC.VC.opendb
+ipch/
+*.tlog
+*.lastbuildstate
+x64/
+Debug/
+Release/
 
-# Fichiers temporaires
-*.tmp
-*.temp
-*.log
+# IDEs
 
-# Fichiers IDE (Visual Studio, CLion, etc.)
 .vscode/
 .idea/
 
-# Dossiers spécifiques au système
+
+# Qt / Qt Creator (si utilisé)
+
+*.pro.user
+*.pro.user.*
+moc_*.cpp
+ui_*.h
+qrc_*.cpp
+
+
+# Temporaires / logs
+
+*.log
+*.tmp
+*.temp
+
+
+# OS
+
 .DS_Store
 Thumbs.db
 
-# Librairies externes si présentes
-/libs/
-
+# Notes personnelles 
 
 aide.txt
 

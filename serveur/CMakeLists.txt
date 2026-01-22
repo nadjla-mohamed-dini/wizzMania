@@ -10,7 +10,7 @@ add_executable(serveur
 
 target_include_directories(serveur
     PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 target_link_libraries(serveur

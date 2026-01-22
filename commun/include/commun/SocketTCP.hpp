@@ -10,6 +10,11 @@ public:
     SocketTCP();
     ~SocketTCP();
 
+    SocketTCP(const SocketTCP&) = delete;
+    SocketTCP& operator=(const SocketTCP&) = delete;
+    SocketTCP(SocketTCP&& other) noexcept;
+    SocketTCP& operator=(SocketTCP&& other) noexcept;
+
     bool creer();
     bool connecter(const std::string& ip, int port);
     bool lier(int port);
@@ -22,11 +27,16 @@ public:
     bool estValide() const;
     void fermer();
 
+    // 
+    bool accepter(SocketTCP& client);
+
+
 private:
     static bool initialiserWinsock();
     static int s_compteurWinsock;
 
     SOCKET m_socket;
+    std::string m_tamponReception;
 };
 
 #endif // SOCKET_TCP_HPP

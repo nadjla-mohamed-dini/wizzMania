@@ -2,7 +2,7 @@
 #define SERVEUR_TCP_HPP
 
 #include "commun/SocketTCP.hpp"
-#include "commun/Message.hpp"
+#include "serveur/GestionnaireClients.hpp"
 
 class ServeurTCP
 {
@@ -15,6 +15,7 @@ public:
 private:
     int m_port;
     SocketTCP m_socketEcoute;
+    GestionnaireClients m_gestionnaire;
 };
 
 #endif // SERVEUR_TCP_HPP

@@ -1,4 +1,5 @@
 #include "serveur/ServeurTCP.hpp"
+#include "serveur/ClientSession.hpp"
 #include <iostream>
 
 ServeurTCP::ServeurTCP(int port)
@@ -31,69 +32,21 @@ bool ServeurTCP::demarrer()
 
 void ServeurTCP::attendreClient()
 {
-    std::cout << "Serveur en attente d'un client...\n";
-
-    SocketTCP client = m_socketEcoute.accepter();
-
-    if (!client.estValide())
-    {
-        std::cerr << "Erreur : accept client\n";
-        return;
-    }
-
-    std::cout << "Client connecté\n";
+    std::cout << "Serveur en attente de clients...\n";
 
     while (true)
     {
-        std::string brut = client.recevoir();
+        SocketTCP client = m_socketEcoute.accepter();
 
-        if (brut.empty())
+        if (!client.estValide())
         {
-            std::cout << "Client déconnecté\n";
-            break;
+            std::cerr << "Erreur : accept client\n";
+            continue;
         }
 
-        Message message = Message::depuisString(brut);
-
-        switch (message.getType())
-        {
-        case Message::Type::CONNEXION:
-            std::cout << message.getAuteur()
-                      << " s'est connecté\n";
-            break;
-
-        case Message::Type::DECONNEXION:
-            std::cout << message.getAuteur()
-                      << " s'est déconnecté\n";
-            return;
-
-        case Message::Type::MESSAGE:
-            std::cout << "["
-                      << message.getAuteur()
-                      << "] "
-                      << message.getContenu()
-                      << "\n";
-            break;
-
-        case Message::Type::WIZZ:
-            std::cout << "*** WIZZ de "
-                      << message.getAuteur()
-                      << " ***\n";
-            break;
-
-        default:
-            std::cout << "Message inconnu reçu\n";
-            break;
-        }
-
-        // Accusé de réception
-        Message reponse(
-            Message::Type::MESSAGE,
-            "Serveur",
-            "OK"
-        );
-
-        client.envoyer(reponse.toString());
+        auto session = std::make_shared<ClientSession>(std::move(client), m_gestionnaire);
+        m_gestionnaire.ajouter(session);
+        session->demarrer();
     }
 }
 

@@ -45,9 +45,11 @@ int main(int argc, char* argv[])
     if (modeAuto)
     {
         client.envoyerMessage("Bonjour depuis le client (mode auto)");
-        std::this_thread::sleep_for(std::chrono::milliseconds(150));
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
         client.envoyerWizz();
-        std::this_thread::sleep_for(std::chrono::milliseconds(150));
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        client.envoyerMessage("Fin du mode auto, au revoir");
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
         client.deconnecter();
         return 0;
     }

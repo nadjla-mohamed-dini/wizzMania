@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PrincipalWindow</class>
+ <widget class="QWidget" name="PrincipalWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>3</number>
+     </property>
+     <widget class="QWidget" name="tab_4">
+      <attribute name="title">
+       <string>Accueil</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="QLabel" name="homeTitleLabel">
+         <property name="styleSheet">
+          <string notr="true">QLabel {
+       color: #00A8E8;
+       font-size: 32px;
+       font-weight: bold;
+   }</string>
+         </property>
+         <property name="text">
+          <string>Bienvenue sur MSN</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>18</width>
+           <height>166</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QLabel" name="homeUsernameLabel">
+         <property name="styleSheet">
+          <string notr="true">QLabel {
+       color: white;
+       font-size: 24px;
+   }</string>
+         </property>
+         <property name="text">
+          <string>Utilisateur</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab">
+      <attribute name="title">
+       <string>Chat</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <widget class="QTextEdit" name="chatDisplay">
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="messageInput">
+         <property name="placeholderText">
+          <string>Taper votre message...</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="sendButton">
+         <property name="text">
+          <string>Envoyer</string>
+         </property>
+         <property name="icon">
+          <iconset theme="QIcon::ThemeIcon::DocumentSend"/>
+         </property>
+         <property name="checkable">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_3">
+      <attribute name="title">
+       <string>Jeux</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_4">
+       <item>
+        <widget class="QLabel" name="label">
+         <property name="text">
+          <string>Jeux disponibles</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QListWidget" name="gamesListWidget"/>
+       </item>
+       <item>
+        <widget class="QPushButton" name="lunchGameButton">
+         <property name="text">
+          <string>Lancer le jeu</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_2">
+      <attribute name="title">
+       <string>Profil</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_5">
+       <item>
+        <widget class="QLabel" name="welcomeLabel">
+         <property name="styleSheet">
+          <string notr="true">QLabel {
+      font-size: 24px;
+      font-weight: bold;
+      color: #00A8E8;
+  }</string>
+         </property>
+         <property name="text">
+          <string>Bienvenue</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>60</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>Pseudo: </string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="usernameLabel">
+         <property name="styleSheet">
+          <string notr="true">QLabel {
+      font-size: 18px;
+      color: white;
+  }
+</string>
+         </property>
+         <property name="text">
+          <string>Utilisateur: </string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_3">
+         <property name="text">
+          <string>Status: </string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="statusComboBox">
+         <item>
+          <property name="text">
+           <string>En ligne</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Absent</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Occupé</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Invisible</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_3">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>60</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

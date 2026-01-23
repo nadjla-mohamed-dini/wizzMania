@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QLabel" name="label">
+      <property name="font">
+       <font>
+        <pointsize>-1</pointsize>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">QLabel {
+    color: #00A8E8;
+    font-size: 28px;
+    font-weight: bold;
+    padding: 20px;
+}</string>
+      </property>
+      <property name="text">
+       <string>Connexion MSN</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="label_2">
+      <property name="styleSheet">
+       <string notr="true"/>
+      </property>
+      <property name="text">
+       <string>Pseudo: </string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLineEdit" name="usernameLineEdit">
+      <property name="font">
+       <font>
+        <pointsize>-1</pointsize>
+        <italic>false</italic>
+       </font>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">QLineEdit {
+    background-color: #2b2b2b;
+    color: white;
+    border: 2px solid #555;
+    border-radius: 5px;
+    padding: 8px;
+    font-size: 14px;
+}
+
+QLineEdit:focus {
+    border: 2px solid #00A8E8;
+}</string>
+      </property>
+      <property name="placeholderText">
+       <string>votre pseudo</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="label_3">
+      <property name="text">
+       <string>Mot de passe:</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLineEdit" name="passwordLineEdit">
+      <property name="font">
+       <font>
+        <pointsize>-1</pointsize>
+        <italic>false</italic>
+       </font>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">QLineEdit {
+    background-color: #2b2b2b;
+    color: white;
+    border: 2px solid #555;
+    border-radius: 5px;
+    padding: 8px;
+    font-size: 14px;
+}
+
+QLineEdit:focus {
+    border: 2px solid #00A8E8;
+}</string>
+      </property>
+      <property name="echoMode">
+       <enum>QLineEdit::EchoMode::Password</enum>
+      </property>
+      <property name="placeholderText">
+       <string>mot de passe</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="registerButton">
+      <property name="styleSheet">
+       <string notr="true">QPushButton {
+    background-color: transparent;
+    color: #00A8E8;
+    border: 2px solid #00A8E8;
+    border-radius: 5px;
+    padding: 12px;
+    font-size: 16px;
+}
+
+QPushButton:hover {
+    background-color: #00A8E8;
+    color: white;
+}</string>
+      </property>
+      <property name="text">
+       <string>Créer un compte</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="loginButton">
+      <property name="styleSheet">
+       <string notr="true">QPushButton {
+    background-color: #00A8E8;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 12px;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+QPushButton:hover {
+    background-color: #0096D6;
+}
+
+QPushButton:pressed {
+    background-color: #007AB8;
+}</string>
+      </property>
+      <property name="text">
+       <string>Se connecter</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>800</width>
+     <height>17</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

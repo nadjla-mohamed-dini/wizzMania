@@ -14,10 +14,15 @@ endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+option(WIZZMANIA_BUILD_GUI "Build Qt6 GUI client (requires Qt6)" OFF)
+
 add_subdirectory(commun)
 add_subdirectory(serveur)
 add_subdirectory(client)
 add_subdirectory(tests)
+if (WIZZMANIA_BUILD_GUI)
+    add_subdirectory(gui)
+endif()
 
 message(STATUS "Projet WIZZ Mania configuré avec succès")
 

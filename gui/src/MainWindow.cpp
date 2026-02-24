@@ -1,6 +1,7 @@
 #include "MainWindow.hpp"
 
 #include <QApplication>
+#include <QListWidget>
 #include <QTextBrowser>
 #include <QLineEdit>
 #include <QPushButton>
@@ -8,7 +9,7 @@
 #include <QSpinBox>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
-#include <QInputDialog>
+#include <QStyle>
 #include <QTimer>
 
 MainWindow::MainWindow(QWidget* parent)
@@ -17,6 +18,19 @@ MainWindow::MainWindow(QWidget* parent)
     m_client = new ChatClient(this);
 
     auto* central = new QWidget(this);
+    central->setObjectName("central");
+    central->setStyleSheet(
+        "QWidget#central {"
+        "  background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #f4f8ff, stop:1 #e7f0ff);"
+        "}"
+        "QLineEdit { padding: 6px 8px; border: 1px solid #b9c8e6; border-radius: 8px; background: white; }"
+        "QSpinBox  { padding: 6px 8px; border: 1px solid #b9c8e6; border-radius: 8px; background: white; }"
+        "QPushButton { padding: 6px 12px; border-radius: 10px; background: #2f6fed; color: white; }"
+        "QPushButton:disabled { background: #9cb7f7; }"
+        "QPushButton#wizzBtn { background: #ff4da6; }"
+        "QTextBrowser { border: 1px solid #b9c8e6; border-radius: 12px; background: rgba(255,255,255,0.92); }"
+        "QListWidget { border: 1px solid #b9c8e6; border-radius: 12px; background: rgba(255,255,255,0.92); }"
+    );
     auto* root = new QVBoxLayout(central);
 
     auto* top = new QHBoxLayout();
@@ -24,25 +38,41 @@ MainWindow::MainWindow(QWidget* parent)
     m_port = new QSpinBox(central);
     m_port->setRange(1, 65535);
     m_port->setValue(4242);
+    m_pseudo = new QLineEdit(central);
+    m_pseudo->setPlaceholderText("Pseudo");
     m_connectBtn = new QPushButton("Connect", central);
     m_status = new QLabel("Disconnected", central);
+    m_status->setStyleSheet("color:#345; font-weight:600;");
 
     top->addWidget(new QLabel("Host:", central));
     top->addWidget(m_host, 1);
     top->addWidget(new QLabel("Port:", central));
     top->addWidget(m_port);
+    top->addWidget(new QLabel("Pseudo:", central));
+    top->addWidget(m_pseudo);
     top->addWidget(m_connectBtn);
     top->addWidget(m_status);
     root->addLayout(top);
 
+    auto* middle = new QHBoxLayout();
     m_chat = new QTextBrowser(central);
     m_chat->setOpenExternalLinks(false);
-    root->addWidget(m_chat, 1);
+    m_chat->setStyleSheet("font-family: Segoe UI; font-size: 11pt;");
+
+    m_contacts = new QListWidget(central);
+    m_contacts->setFixedWidth(220);
+    m_contacts->setStyleSheet("font-family: Segoe UI; font-size: 10.5pt;");
+
+    middle->addWidget(m_chat, 1);
+    middle->addWidget(m_contacts);
+    root->addLayout(middle, 1);
 
     auto* bottom = new QHBoxLayout();
     m_input = new QLineEdit(central);
+    m_input->setPlaceholderText("Écris ton message…");
     m_sendBtn = new QPushButton("Send", central);
     m_wizzBtn = new QPushButton("Wizz", central);
+    m_wizzBtn->setObjectName("wizzBtn");
     bottom->addWidget(m_input, 1);
     bottom->addWidget(m_sendBtn);
     bottom->addWidget(m_wizzBtn);
@@ -51,6 +81,10 @@ MainWindow::MainWindow(QWidget* parent)
     setCentralWidget(central);
     setWindowTitle("WizzMania");
     resize(820, 560);
+
+    m_connectBtn->setIcon(style()->standardIcon(QStyle::SP_DialogYesButton));
+    m_sendBtn->setIcon(style()->standardIcon(QStyle::SP_ArrowRight));
+    m_wizzBtn->setIcon(style()->standardIcon(QStyle::SP_MessageBoxInformation));
 
     connect(m_connectBtn, &QPushButton::clicked, this, &MainWindow::onConnectClicked);
     connect(m_sendBtn, &QPushButton::clicked, this, &MainWindow::onSendClicked);
@@ -66,25 +100,7 @@ MainWindow::MainWindow(QWidget* parent)
     connect(m_client, &ChatClient::userDisconnected, this, &MainWindow::onUserDisconnected);
 
     setUiConnected(false);
-
-    bool ok = false;
-    QString pseudo = QInputDialog::getText(
-        this,
-        "Pseudo",
-        "Entrez votre pseudo :",
-        QLineEdit::Normal,
-        "",
-        &ok
-    ).trimmed();
-
-    if (!ok || pseudo.isEmpty())
-    {
-        QTimer::singleShot(0, this, &QWidget::close);
-        return;
-    }
-
-    m_client->connectToServer(m_host->text(), static_cast<quint16>(m_port->value()), pseudo);
-    appendSystem(QString("<i>Pseudo: <b>%1</b></i>").arg(pseudo.toHtmlEscaped()));
+    appendSystem("<b>Bienvenue sur WizzMania.</b> Renseigne ton pseudo puis clique sur <b>Connect</b>.");
 }
 
 void MainWindow::onConnectClicked()
@@ -96,7 +112,8 @@ void MainWindow::onConnectClicked()
         return;
     }
 
-    if (m_client->pseudo().trimmed().isEmpty())
+    const QString pseudo = m_pseudo->text().trimmed();
+    if (pseudo.isEmpty())
     {
         appendSystem("<span style='color:#c00'><b>Pseudo manquant.</b></span>");
         return;
@@ -105,7 +122,7 @@ void MainWindow::onConnectClicked()
     appendSystem("<i>Connexion…</i>");
     m_client->connectToServer(m_host->text(),
                               static_cast<quint16>(m_port->value()),
-                              m_client->pseudo());
+                              pseudo);
 }
 
 void MainWindow::onSendClicked()
@@ -142,12 +159,15 @@ void MainWindow::onConnected()
 {
     appendSystem("<span style='color:#090'><b>Connecté.</b></span>");
     setUiConnected(true);
+    m_contacts->clear();
+    upsertContact(m_client->pseudo(), true);
 }
 
 void MainWindow::onDisconnected()
 {
     appendSystem("<span style='color:#666'><b>Déconnecté.</b></span>");
     setUiConnected(false);
+    m_contacts->clear();
 }
 
 void MainWindow::onError(const QString& message)
@@ -170,23 +190,41 @@ void MainWindow::onWizz(const QString& author)
 void MainWindow::onUserConnected(const QString& author)
 {
     appendSystem(QString("<b>%1</b> s'est connecté.").arg(author.toHtmlEscaped()));
+    upsertContact(author, false);
 }
 
 void MainWindow::onUserDisconnected(const QString& author)
 {
     appendSystem(QString("<b>%1</b> s'est déconnecté.").arg(author.toHtmlEscaped()));
+    removeContact(author);
 }
 
 void MainWindow::appendSystem(const QString& html)
 {
-    m_chat->append(QString("<div style='color:#444'>%1</div>").arg(html));
+    m_chat->append(QString(
+        "<div style='color:#3b4b66; margin:6px 0; font-size:10pt;'>%1</div>"
+    ).arg(html));
 }
 
 void MainWindow::appendChatLine(const QString& author, const QString& content)
 {
+    const bool isSelf = author.trimmed().compare(m_client->pseudo().trimmed(), Qt::CaseInsensitive) == 0;
     const QString a = author.toHtmlEscaped();
     const QString c = content.toHtmlEscaped();
-    m_chat->append(QString("<div><b>[%1]</b> %2</div>").arg(a, c));
+
+    const QString align = isSelf ? "right" : "left";
+    const QString bubbleBg = isSelf ? "#d6f5d6" : "#ffffff";
+    const QString bubbleBorder = isSelf ? "#a6e3a6" : "#d6ddf0";
+
+    m_chat->append(QString(
+        "<div style='text-align:%1; margin:10px 0;'>"
+        "  <div style='display:inline-block; max-width:70%%; padding:10px 12px;"
+        "              border:1px solid %2; border-radius:14px; background:%3;'>"
+        "    <div style='font-size:9.5pt; color:#5a6b88; margin-bottom:4px;'><b>%4</b></div>"
+        "    <div style='font-size:11pt; color:#10223a; white-space:pre-wrap;'>%5</div>"
+        "  </div>"
+        "</div>"
+    ).arg(align, bubbleBorder, bubbleBg, a, c));
 }
 
 void MainWindow::showWizzEffect(const QString& author)
@@ -214,10 +252,58 @@ void MainWindow::setUiConnected(bool connected)
 
     m_host->setEnabled(!connected);
     m_port->setEnabled(!connected);
+    m_pseudo->setEnabled(!connected);
 
     m_sendBtn->setEnabled(connected);
     m_wizzBtn->setEnabled(connected);
     m_input->setEnabled(connected);
+}
+
+void MainWindow::upsertContact(const QString& name, bool isSelf)
+{
+    const QString trimmed = name.trimmed();
+    if (trimmed.isEmpty())
+        return;
+
+    for (int i = 0; i < m_contacts->count(); ++i)
+    {
+        auto* item = m_contacts->item(i);
+        if (!item)
+            continue;
+        const QString base = item->data(Qt::UserRole).toString();
+        if (base.compare(trimmed, Qt::CaseInsensitive) == 0)
+            return;
+    }
+
+    const QString label = isSelf ? QString("%1 (toi)").arg(trimmed) : trimmed;
+    auto* item = new QListWidgetItem(label, m_contacts);
+    item->setData(Qt::UserRole, trimmed);
+    item->setIcon(style()->standardIcon(isSelf ? QStyle::SP_ComputerIcon : QStyle::SP_DirHomeIcon));
+
+    if (isSelf)
+        m_contacts->insertItem(0, item);
+    else
+        m_contacts->addItem(item);
+}
+
+void MainWindow::removeContact(const QString& name)
+{
+    const QString trimmed = name.trimmed();
+    if (trimmed.isEmpty())
+        return;
+
+    for (int i = 0; i < m_contacts->count(); ++i)
+    {
+        auto* item = m_contacts->item(i);
+        if (!item)
+            continue;
+        const QString base = item->data(Qt::UserRole).toString();
+        if (base.compare(trimmed, Qt::CaseInsensitive) == 0)
+        {
+            delete m_contacts->takeItem(i);
+            return;
+        }
+    }
 }
 
 void MainWindow::startShake()

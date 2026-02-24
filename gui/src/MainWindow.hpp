@@ -37,8 +37,10 @@ private:
     void showWizzEffect(const QString& author);
     void setUiConnected(bool connected);
     void startShake();
+    void startFlash();
     void upsertContact(const QString& name, bool isSelf);
     void removeContact(const QString& name);
+    QIcon makeAvatarIcon(const QString& name, bool isSelf) const;
 
     ChatClient* m_client = nullptr;
 

@@ -1,7 +1,13 @@
 #include "MainWindow.hpp"
 
 #include <QApplication>
+#include <QDateTime>
+#include <QFrame>
+#include <QGraphicsDropShadowEffect>
+#include <QIcon>
 #include <QListWidget>
+#include <QPainter>
+#include <QPixmap>
 #include <QTextBrowser>
 #include <QLineEdit>
 #include <QPushButton>
@@ -211,6 +217,7 @@ void MainWindow::appendChatLine(const QString& author, const QString& content)
     const bool isSelf = author.trimmed().compare(m_client->pseudo().trimmed(), Qt::CaseInsensitive) == 0;
     const QString a = author.toHtmlEscaped();
     const QString c = content.toHtmlEscaped();
+    const QString t = QDateTime::currentDateTime().toString("HH:mm");
 
     const QString align = isSelf ? "right" : "left";
     const QString bubbleBg = isSelf ? "#d6f5d6" : "#ffffff";
@@ -220,16 +227,19 @@ void MainWindow::appendChatLine(const QString& author, const QString& content)
         "<div style='text-align:%1; margin:10px 0;'>"
         "  <div style='display:inline-block; max-width:70%%; padding:10px 12px;"
         "              border:1px solid %2; border-radius:14px; background:%3;'>"
-        "    <div style='font-size:9.5pt; color:#5a6b88; margin-bottom:4px;'><b>%4</b></div>"
-        "    <div style='font-size:11pt; color:#10223a; white-space:pre-wrap;'>%5</div>"
+        "    <div style='font-size:9.5pt; color:#5a6b88; margin-bottom:4px;'>"
+        "      <b>%4</b> <span style='color:#8aa0c4'>&nbsp;•&nbsp;%5</span>"
+        "    </div>"
+        "    <div style='font-size:11pt; color:#10223a; white-space:pre-wrap;'>%6</div>"
         "  </div>"
         "</div>"
-    ).arg(align, bubbleBorder, bubbleBg, a, c));
+    ).arg(align, bubbleBorder, bubbleBg, a, t.toHtmlEscaped(), c));
 }
 
 void MainWindow::showWizzEffect(const QString& author)
 {
     QApplication::beep();
+    QApplication::alert(this, 0);
 
     appendSystem(QString(
         "<div style='border:2px solid #e39; padding:6px; background:#fff3fa'>"
@@ -242,7 +252,53 @@ void MainWindow::showWizzEffect(const QString& author)
     raise();
     activateWindow();
 
+    startFlash();
     startShake();
+
+    // Toast stylée (auto-détruite) près du haut de la fenêtre
+    auto* toast = new QFrame(nullptr, Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+    toast->setAttribute(Qt::WA_DeleteOnClose, true);
+    toast->setAttribute(Qt::WA_TranslucentBackground, true);
+
+    auto* card = new QFrame(toast);
+    card->setObjectName("toastCard");
+    card->setStyleSheet(
+        "QFrame#toastCard {"
+        "  background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #fff7fb, stop:1 #ffe3f2);"
+        "  border: 1px solid #ff7fbf;"
+        "  border-radius: 14px;"
+        "}"
+        "QLabel { color: #5a1240; font-family: Segoe UI; }"
+    );
+
+    auto* shadow = new QGraphicsDropShadowEffect(card);
+    shadow->setBlurRadius(18);
+    shadow->setOffset(0, 6);
+    shadow->setColor(QColor(0, 0, 0, 90));
+    card->setGraphicsEffect(shadow);
+
+    auto* title = new QLabel("W I Z Z !", card);
+    title->setStyleSheet("font-weight: 800; font-size: 14pt; letter-spacing: 2px;");
+    auto* msg = new QLabel(QString("de %1").arg(author.toHtmlEscaped()), card);
+    msg->setStyleSheet("font-weight: 600; font-size: 11pt;");
+
+    auto* lay = new QVBoxLayout(card);
+    lay->setContentsMargins(14, 12, 14, 12);
+    lay->addWidget(title);
+    lay->addWidget(msg);
+
+    auto* outer = new QVBoxLayout(toast);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->addWidget(card);
+
+    toast->adjustSize();
+    const QRect g = frameGeometry();
+    const int x = g.center().x() - toast->width() / 2;
+    const int y = g.top() + 18;
+    toast->move(x, y);
+    toast->show();
+
+    QTimer::singleShot(1800, toast, &QWidget::close);
 }
 
 void MainWindow::setUiConnected(bool connected)
@@ -257,6 +313,32 @@ void MainWindow::setUiConnected(bool connected)
     m_sendBtn->setEnabled(connected);
     m_wizzBtn->setEnabled(connected);
     m_input->setEnabled(connected);
+}
+
+void MainWindow::startFlash()
+{
+    // Petit flash (opacité) + changement de titre temporaire
+    const QString originalTitle = windowTitle();
+    setWindowTitle("WizzMania — WIZZ!");
+
+    int step = 0;
+    auto* timer = new QTimer(this);
+    timer->setInterval(65);
+
+    connect(timer, &QTimer::timeout, this, [this, timer, originalTitle, step]() mutable {
+        const bool on = (step % 2 == 0);
+        setWindowOpacity(on ? 0.86 : 1.0);
+        step++;
+        if (step >= 10)
+        {
+            timer->stop();
+            setWindowOpacity(1.0);
+            setWindowTitle(originalTitle);
+            timer->deleteLater();
+        }
+    });
+
+    timer->start();
 }
 
 void MainWindow::upsertContact(const QString& name, bool isSelf)
@@ -278,7 +360,7 @@ void MainWindow::upsertContact(const QString& name, bool isSelf)
     const QString label = isSelf ? QString("%1 (toi)").arg(trimmed) : trimmed;
     auto* item = new QListWidgetItem(label, m_contacts);
     item->setData(Qt::UserRole, trimmed);
-    item->setIcon(style()->standardIcon(isSelf ? QStyle::SP_ComputerIcon : QStyle::SP_DirHomeIcon));
+    item->setIcon(makeAvatarIcon(trimmed, isSelf));
 
     if (isSelf)
         m_contacts->insertItem(0, item);
@@ -304,6 +386,44 @@ void MainWindow::removeContact(const QString& name)
             return;
         }
     }
+}
+
+QIcon MainWindow::makeAvatarIcon(const QString& name, bool isSelf) const
+{
+    const int size = 36;
+    QPixmap pm(size, size);
+    pm.fill(Qt::transparent);
+
+    const QString trimmed = name.trimmed();
+    const QString initial = trimmed.isEmpty() ? "?" : trimmed.left(1).toUpper();
+
+    // Couleur stable basée sur le nom
+    const uint h = qHash(trimmed);
+    const int hue = static_cast<int>(h % 360);
+    QColor base = QColor::fromHsv(hue, 110, 235);
+    if (isSelf)
+        base = QColor::fromRgb(80, 200, 120);
+
+    QPainter p(&pm);
+    p.setRenderHint(QPainter::Antialiasing, true);
+    p.setPen(Qt::NoPen);
+    p.setBrush(base);
+    p.drawEllipse(0, 0, size, size);
+
+    // petit reflet
+    QColor shine = QColor(255, 255, 255, 70);
+    p.setBrush(shine);
+    p.drawEllipse(4, 3, size - 10, size - 14);
+
+    p.setPen(QColor(255, 255, 255));
+    QFont f("Segoe UI");
+    f.setBold(true);
+    f.setPointSize(14);
+    p.setFont(f);
+    p.drawText(QRect(0, 0, size, size), Qt::AlignCenter, initial);
+
+    p.end();
+    return QIcon(pm);
 }
 
 void MainWindow::startShake()

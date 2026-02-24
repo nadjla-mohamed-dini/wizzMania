@@ -100,10 +100,16 @@ void ClientTCP::boucleReception()
             break;
 
         case Message::Type::WIZZ:
-            std::cout << "*** WIZZ de "
-                      << message.getAuteur()
-                      << " ***\n";
+        {
+            // Alerte visuelle + tentative d'alerte sonore (bell '\a')
+            std::cout << '\a' << std::flush;
+            std::cout << "\n"
+                      << "========================================\n"
+                      << "               W I Z Z  !\n"
+                      << "            de " << message.getAuteur() << "\n"
+                      << "========================================\n";
             break;
+        }
 
         case Message::Type::CONNEXION:
             std::cout << "*** "

@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "principalwindow.h"
+#include "usermanager.h"
 #include "loginwindow.h"
 #include <QMessageBox>
 #include <QPushButton>
@@ -11,6 +12,8 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     setWindowTitle("MSN Connexion");
+
+    usermanager = new UserManager(this);
 
     // Connecter les boutons
     connect(ui->loginButton, &QPushButton::clicked,
@@ -36,6 +39,20 @@ void MainWindow::onLoginClicked()
                              "Veuillez remplir tous les champs !");
         return;
     }
+
+    if (!usermanager -> userExists(username))
+    {
+        QMessageBox::warning(this, "Erreur", "Utilisateur iconnu !");
+        return;
+    }
+
+    if (!usermanager -> checkPassword(username, password))
+    {
+        QMessageBox::warning(this, "Erreur", "Mot de passe incorect");
+        return;
+
+    }
+
     PrincipalWindow *principalWin = new PrincipalWindow();
     principalWin ->setUsername(username);
     principalWin->show();
@@ -53,3 +70,6 @@ void MainWindow::onRegisterClicked()
     loginWin->show();
     this->close();
 }
+//ajouter le fait de pas pouvoir se connecter si pas de compte fait
+//faire aussi les tests de connexion
+

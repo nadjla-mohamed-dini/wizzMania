@@ -2,6 +2,7 @@
 #include "ui_principalwindow.h"
 #include <QPushButton>
 #include <QMessageBox>
+#include <QDateTime>
 
 PrincipalWindow::PrincipalWindow(QWidget *parent)
     : QWidget(parent)
@@ -11,7 +12,6 @@ PrincipalWindow::PrincipalWindow(QWidget *parent)
     setWindowTitle("MSN CHAT - Accueil");
     resize(700, 600);
 
-    // Corriger les noms de classe : PrincipalWindow au lieu de ChatWindow
     connect(ui->sendButton, &QPushButton::clicked,
             this, &PrincipalWindow::onSendClicked);
 
@@ -21,10 +21,10 @@ PrincipalWindow::PrincipalWindow(QWidget *parent)
     connect(ui->statusComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &PrincipalWindow::onStatusChanged);
 
-    connect(ui->lunchGameButton, &QPushButton::clicked,  // launchGameButton (pas lauchGameButton)
+    connect(ui->lunchGameButton, &QPushButton::clicked,
             this, &PrincipalWindow::onLaunchGameClicked);
 
-    setupGamesTab();  // setupGamesTab (pas setUpGamesTab)
+    setupGamesTab();
 }
 
 PrincipalWindow::~PrincipalWindow()
@@ -52,7 +52,16 @@ void PrincipalWindow::onSendClicked()
 
     if (!message.isEmpty())
     {
-        ui->chatDisplay->append(currentUsername + ": " + message);
+        QString currentTime = QDateTime::currentDateTime().toString("hh:mm");
+
+        QString formettedMessage = QString ("<span style= 'color:#999;'>[%1]</span>"
+                                            "<span style= 'color:#FF6600; font-weight:bold; '%2:</span>"
+                                            "<span style= 'color:#E0E0E0; '>%3</span>")
+                                        .arg(currentTime)
+                                        .arg(currentUsername)
+                                        .arg(message);
+
+        ui->chatDisplay->append(formettedMessage);
         ui->messageInput->clear();
         // TODO: Envoyer au serveur TCP/IP
     }
@@ -85,3 +94,4 @@ void PrincipalWindow::setupGamesTab()
     // Ajouter des jeux à la liste
 
 }
+//ajouter la possibilite d'ajouter une photo de profil

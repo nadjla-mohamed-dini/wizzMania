@@ -81,3 +81,24 @@ TEST_CASE("Message - sérialisation: WIZZ produit un contenu vide")
     REQUIRE(parsed.getContenu() == "");
 }
 
+TEST_CASE("Message - sérialisation et parsing (PRIVE)")
+{
+    Message m(Message::Type::PRIVE, "Alice", "Bob", "Salut Bob");
+    const std::string brut = m.toString();
+
+    Message parsed = Message::depuisString(brut);
+    REQUIRE(parsed.getType() == Message::Type::PRIVE);
+    REQUIRE(parsed.getAuteur() == "Alice");
+    REQUIRE(parsed.getCible() == "Bob");
+    REQUIRE(parsed.getContenu() == "Salut Bob");
+}
+
+TEST_CASE("Message - parsing (PRIVE) : contenu peut contenir '|'")
+{
+    Message parsed = Message::depuisString("PRIVE|Alice|Bob|Salut|encore|ok");
+    REQUIRE(parsed.getType() == Message::Type::PRIVE);
+    REQUIRE(parsed.getAuteur() == "Alice");
+    REQUIRE(parsed.getCible() == "Bob");
+    REQUIRE(parsed.getContenu() == "Salut|encore|ok");
+}
+

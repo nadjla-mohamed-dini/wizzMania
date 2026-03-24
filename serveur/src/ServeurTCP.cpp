@@ -3,7 +3,8 @@
 #include <iostream>
 
 ServeurTCP::ServeurTCP(int port)
-    : m_port(port)
+    : m_port(port),
+      m_users("users.db")
 {
 }
 
@@ -44,7 +45,7 @@ void ServeurTCP::attendreClient()
             continue;
         }
 
-        auto session = std::make_shared<ClientSession>(std::move(client), m_gestionnaire);
+        auto session = std::make_shared<ClientSession>(std::move(client), m_gestionnaire, m_users);
         m_gestionnaire.ajouter(session);
         session->demarrer();
     }

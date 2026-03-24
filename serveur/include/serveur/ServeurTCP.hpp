@@ -3,6 +3,7 @@
 
 #include "commun/SocketTCP.hpp"
 #include "serveur/GestionnaireClients.hpp"
+#include "serveur/UserStore.hpp"
 
 class ServeurTCP
 {
@@ -16,6 +17,7 @@ private:
     int m_port;
     SocketTCP m_socketEcoute;
     GestionnaireClients m_gestionnaire;
+    UserStore m_users;
 };
 
 #endif // SERVEUR_TCP_HPP

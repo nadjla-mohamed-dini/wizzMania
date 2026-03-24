@@ -8,6 +8,7 @@
 #include <QListWidget>
 #include <QPainter>
 #include <QPixmap>
+#include <QStackedWidget>
 #include <QTextBrowser>
 #include <QLineEdit>
 #include <QPushButton>
@@ -36,63 +37,116 @@ MainWindow::MainWindow(QWidget* parent)
         "QPushButton#wizzBtn { background: #ff4da6; }"
         "QTextBrowser { border: 1px solid #b9c8e6; border-radius: 12px; background: rgba(255,255,255,0.92); }"
         "QListWidget { border: 1px solid #b9c8e6; border-radius: 12px; background: rgba(255,255,255,0.92); }"
+        "QLabel#title { color:#123; font-weight:800; font-size:18pt; }"
+        "QLabel#subtitle { color:#345; font-weight:600; }"
+        "QLabel#loginStatus { color:#234; }"
     );
-    auto* root = new QVBoxLayout(central);
 
-    auto* top = new QHBoxLayout();
-    m_host = new QLineEdit("127.0.0.1", central);
-    m_port = new QSpinBox(central);
+    auto* root = new QVBoxLayout(central);
+    m_pages = new QStackedWidget(central);
+    root->addWidget(m_pages, 1);
+
+    // ---------- Page LOGIN ----------
+    m_pageLogin = new QWidget(central);
+    auto* loginRoot = new QVBoxLayout(m_pageLogin);
+    loginRoot->setContentsMargins(24, 24, 24, 24);
+    loginRoot->setSpacing(14);
+
+    auto* header = new QVBoxLayout();
+    auto* title = new QLabel("WizzMania", m_pageLogin);
+    title->setObjectName("title");
+    auto* subtitle = new QLabel("Connexion — crée un compte ou connecte-toi.", m_pageLogin);
+    subtitle->setObjectName("subtitle");
+    header->addWidget(title);
+    header->addWidget(subtitle);
+    loginRoot->addLayout(header);
+
+    auto* rowHost = new QHBoxLayout();
+    m_host = new QLineEdit("127.0.0.1", m_pageLogin);
+    m_port = new QSpinBox(m_pageLogin);
     m_port->setRange(1, 65535);
     m_port->setValue(4242);
-    m_pseudo = new QLineEdit(central);
-    m_pseudo->setPlaceholderText("Pseudo");
-    m_connectBtn = new QPushButton("Connect", central);
-    m_status = new QLabel("Disconnected", central);
-    m_status->setStyleSheet("color:#345; font-weight:600;");
+    rowHost->addWidget(new QLabel("Host:", m_pageLogin));
+    rowHost->addWidget(m_host, 1);
+    rowHost->addWidget(new QLabel("Port:", m_pageLogin));
+    rowHost->addWidget(m_port);
+    loginRoot->addLayout(rowHost);
 
-    top->addWidget(new QLabel("Host:", central));
-    top->addWidget(m_host, 1);
-    top->addWidget(new QLabel("Port:", central));
-    top->addWidget(m_port);
-    top->addWidget(new QLabel("Pseudo:", central));
-    top->addWidget(m_pseudo);
-    top->addWidget(m_connectBtn);
+    m_login = new QLineEdit(m_pageLogin);
+    m_login->setPlaceholderText("Login");
+    m_password = new QLineEdit(m_pageLogin);
+    m_password->setPlaceholderText("Password");
+    m_password->setEchoMode(QLineEdit::Password);
+    loginRoot->addWidget(m_login);
+    loginRoot->addWidget(m_password);
+
+    auto* rowBtns = new QHBoxLayout();
+    m_btnRegister = new QPushButton("Créer un compte", m_pageLogin);
+    m_btnLogin = new QPushButton("Se connecter", m_pageLogin);
+    rowBtns->addWidget(m_btnRegister);
+    rowBtns->addWidget(m_btnLogin);
+    loginRoot->addLayout(rowBtns);
+
+    m_loginStatus = new QLabel("", m_pageLogin);
+    m_loginStatus->setObjectName("loginStatus");
+    m_loginStatus->setWordWrap(true);
+    loginRoot->addWidget(m_loginStatus);
+    loginRoot->addStretch(1);
+
+    m_pages->addWidget(m_pageLogin);
+
+    // ---------- Page MESSENGER ----------
+    m_pageMessenger = new QWidget(central);
+    auto* chatRoot = new QVBoxLayout(m_pageMessenger);
+
+    auto* top = new QHBoxLayout();
+    m_me = new QLabel("Non connecté", m_pageMessenger);
+    m_me->setStyleSheet("color:#123; font-weight:800; font-size:12pt;");
+    m_status = new QLabel("Disconnected", m_pageMessenger);
+    m_status->setStyleSheet("color:#345; font-weight:600;");
+    m_disconnectBtn = new QPushButton("Disconnect", m_pageMessenger);
+    m_disconnectBtn->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
+    top->addWidget(m_me, 1);
     top->addWidget(m_status);
-    root->addLayout(top);
+    top->addWidget(m_disconnectBtn);
+    chatRoot->addLayout(top);
 
     auto* middle = new QHBoxLayout();
-    m_chat = new QTextBrowser(central);
+    m_chat = new QTextBrowser(m_pageMessenger);
     m_chat->setOpenExternalLinks(false);
     m_chat->setStyleSheet("font-family: Segoe UI; font-size: 11pt;");
 
-    m_contacts = new QListWidget(central);
+    m_contacts = new QListWidget(m_pageMessenger);
     m_contacts->setFixedWidth(220);
     m_contacts->setStyleSheet("font-family: Segoe UI; font-size: 10.5pt;");
 
     middle->addWidget(m_chat, 1);
     middle->addWidget(m_contacts);
-    root->addLayout(middle, 1);
+    chatRoot->addLayout(middle, 1);
 
     auto* bottom = new QHBoxLayout();
-    m_input = new QLineEdit(central);
+    m_input = new QLineEdit(m_pageMessenger);
     m_input->setPlaceholderText("Écris ton message…");
-    m_sendBtn = new QPushButton("Send", central);
-    m_wizzBtn = new QPushButton("Wizz", central);
+    m_sendBtn = new QPushButton("Send", m_pageMessenger);
+    m_sendBtn->setIcon(style()->standardIcon(QStyle::SP_ArrowRight));
+    m_wizzBtn = new QPushButton("Wizz", m_pageMessenger);
     m_wizzBtn->setObjectName("wizzBtn");
+    m_wizzBtn->setIcon(style()->standardIcon(QStyle::SP_MessageBoxInformation));
     bottom->addWidget(m_input, 1);
     bottom->addWidget(m_sendBtn);
     bottom->addWidget(m_wizzBtn);
-    root->addLayout(bottom);
+    chatRoot->addLayout(bottom);
+
+    m_pages->addWidget(m_pageMessenger);
 
     setCentralWidget(central);
     setWindowTitle("WizzMania");
     resize(820, 560);
+    connect(m_btnLogin, &QPushButton::clicked, this, &MainWindow::onLoginClicked);
+    connect(m_btnRegister, &QPushButton::clicked, this, &MainWindow::onRegisterClicked);
+    connect(m_password, &QLineEdit::returnPressed, this, &MainWindow::onLoginClicked);
 
-    m_connectBtn->setIcon(style()->standardIcon(QStyle::SP_DialogYesButton));
-    m_sendBtn->setIcon(style()->standardIcon(QStyle::SP_ArrowRight));
-    m_wizzBtn->setIcon(style()->standardIcon(QStyle::SP_MessageBoxInformation));
-
-    connect(m_connectBtn, &QPushButton::clicked, this, &MainWindow::onConnectClicked);
+    connect(m_disconnectBtn, &QPushButton::clicked, this, &MainWindow::onDisconnectClicked);
     connect(m_sendBtn, &QPushButton::clicked, this, &MainWindow::onSendClicked);
     connect(m_wizzBtn, &QPushButton::clicked, this, &MainWindow::onWizzClicked);
     connect(m_input, &QLineEdit::returnPressed, this, &MainWindow::onSendClicked);
@@ -100,35 +154,57 @@ MainWindow::MainWindow(QWidget* parent)
     connect(m_client, &ChatClient::connected, this, &MainWindow::onConnected);
     connect(m_client, &ChatClient::disconnected, this, &MainWindow::onDisconnected);
     connect(m_client, &ChatClient::errorOccurred, this, &MainWindow::onError);
+    connect(m_client, &ChatClient::authOk, this, &MainWindow::onAuthOk);
+    connect(m_client, &ChatClient::authFail, this, &MainWindow::onAuthFail);
+    connect(m_client, &ChatClient::contactsReceived, this, &MainWindow::onContacts);
+    connect(m_client, &ChatClient::privateReceived, this, &MainWindow::onPrivate);
     connect(m_client, &ChatClient::messageReceived, this, &MainWindow::onMessage);
     connect(m_client, &ChatClient::wizzReceived, this, &MainWindow::onWizz);
     connect(m_client, &ChatClient::userConnected, this, &MainWindow::onUserConnected);
     connect(m_client, &ChatClient::userDisconnected, this, &MainWindow::onUserDisconnected);
 
+    setPageLogin();
     setUiConnected(false);
-    appendSystem("<b>Bienvenue sur WizzMania.</b> Renseigne ton pseudo puis clique sur <b>Connect</b>.");
 }
 
-void MainWindow::onConnectClicked()
+void MainWindow::onLoginClicked()
 {
-    if (m_client->isConnected())
+    const QString user = m_login->text().trimmed();
+    const QString pass = m_password->text();
+    if (user.isEmpty() || pass.isEmpty())
     {
-        appendSystem("<i>Déconnexion…</i>");
-        m_client->disconnectFromServer();
+        m_loginStatus->setText("Login et password requis.");
         return;
     }
 
-    const QString pseudo = m_pseudo->text().trimmed();
-    if (pseudo.isEmpty())
+    m_pending = PendingAuth::Login;
+    m_pendingUser = user;
+    m_pendingPass = pass;
+    m_loginStatus->setText("Connexion au serveur…");
+    m_client->connectToServer(m_host->text(), static_cast<quint16>(m_port->value()));
+}
+
+void MainWindow::onRegisterClicked()
+{
+    const QString user = m_login->text().trimmed();
+    const QString pass = m_password->text();
+    if (user.isEmpty() || pass.isEmpty())
     {
-        appendSystem("<span style='color:#c00'><b>Pseudo manquant.</b></span>");
+        m_loginStatus->setText("Login et password requis.");
         return;
     }
 
-    appendSystem("<i>Connexion…</i>");
-    m_client->connectToServer(m_host->text(),
-                              static_cast<quint16>(m_port->value()),
-                              pseudo);
+    m_pending = PendingAuth::Register;
+    m_pendingUser = user;
+    m_pendingPass = pass;
+    m_loginStatus->setText("Connexion au serveur…");
+    m_client->connectToServer(m_host->text(), static_cast<quint16>(m_port->value()));
+}
+
+void MainWindow::onDisconnectClicked()
+{
+    appendSystem("<i>Déconnexion…</i>");
+    m_client->disconnectFromServer();
 }
 
 void MainWindow::onSendClicked()
@@ -163,10 +239,17 @@ void MainWindow::onWizzClicked()
 
 void MainWindow::onConnected()
 {
-    appendSystem("<span style='color:#090'><b>Connecté.</b></span>");
-    setUiConnected(true);
-    m_contacts->clear();
-    upsertContact(m_client->pseudo(), true);
+    // TCP connected: send pending auth action now.
+    if (m_pending == PendingAuth::Login)
+    {
+        m_loginStatus->setText("Authentification…");
+        m_client->sendLogin(m_pendingUser, m_pendingPass);
+    }
+    else if (m_pending == PendingAuth::Register)
+    {
+        m_loginStatus->setText("Création du compte…");
+        m_client->sendRegister(m_pendingUser, m_pendingPass);
+    }
 }
 
 void MainWindow::onDisconnected()
@@ -174,13 +257,62 @@ void MainWindow::onDisconnected()
     appendSystem("<span style='color:#666'><b>Déconnecté.</b></span>");
     setUiConnected(false);
     m_contacts->clear();
+    setPageLogin();
 }
 
 void MainWindow::onError(const QString& message)
 {
-    appendSystem(QString("<span style='color:#c00'><b>Erreur:</b> %1</span>")
-                     .arg(message.toHtmlEscaped()));
-    setUiConnected(m_client->isConnected());
+    const QString msg = QString("<span style='color:#c00'><b>Erreur:</b> %1</span>")
+                            .arg(message.toHtmlEscaped());
+    appendSystem(msg);
+    m_loginStatus->setText(message);
+    setUiConnected(false);
+    setPageLogin();
+}
+
+void MainWindow::onAuthOk(const QString& info)
+{
+    if (m_pending == PendingAuth::Register)
+    {
+        m_loginStatus->setText("Compte créé. Tu peux te connecter.");
+        m_pending = PendingAuth::None;
+        // stay on login page
+        return;
+    }
+
+    if (m_pending == PendingAuth::Login)
+    {
+        m_pending = PendingAuth::None;
+        m_loginStatus->setText("");
+        setPageMessenger();
+
+        m_me->setText(QString("Connecté: %1").arg(m_client->pseudo().toHtmlEscaped()));
+        appendSystem(QString("<span style='color:#090'><b>AUTH OK</b></span> %1").arg(info.toHtmlEscaped()));
+        setUiConnected(true);
+        m_contacts->clear();
+        upsertContact(m_client->pseudo(), true);
+        return;
+    }
+}
+
+void MainWindow::onAuthFail(const QString& reason)
+{
+    m_pending = PendingAuth::None;
+    m_loginStatus->setText(QString("Échec: %1").arg(reason));
+}
+
+void MainWindow::onContacts(const QString& payload)
+{
+    // Étape 3: on fera un vrai parsing + pastilles online/offline.
+    // Pour l’instant on log seulement.
+    appendSystem(QString("<i>Contacts:</i> %1").arg(payload.toHtmlEscaped()));
+}
+
+void MainWindow::onPrivate(const QString& from, const QString& to, const QString& content)
+{
+    Q_UNUSED(to);
+    // Étape 3: routing par contact. Pour l’instant, afficher dans le flux.
+    appendChatLine(from, content);
 }
 
 void MainWindow::onMessage(const QString& author, const QString& content)
@@ -304,15 +436,22 @@ void MainWindow::showWizzEffect(const QString& author)
 void MainWindow::setUiConnected(bool connected)
 {
     m_status->setText(connected ? "Connected" : "Disconnected");
-    m_connectBtn->setText(connected ? "Disconnect" : "Connect");
-
-    m_host->setEnabled(!connected);
-    m_port->setEnabled(!connected);
-    m_pseudo->setEnabled(!connected);
-
+    m_disconnectBtn->setEnabled(connected);
     m_sendBtn->setEnabled(connected);
     m_wizzBtn->setEnabled(connected);
     m_input->setEnabled(connected);
+}
+
+void MainWindow::setPageLogin()
+{
+    m_pages->setCurrentWidget(m_pageLogin);
+    m_disconnectBtn->setEnabled(false);
+    setUiConnected(false);
+}
+
+void MainWindow::setPageMessenger()
+{
+    m_pages->setCurrentWidget(m_pageMessenger);
 }
 
 void MainWindow::startFlash()

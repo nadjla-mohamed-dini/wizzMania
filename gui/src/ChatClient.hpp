@@ -12,8 +12,13 @@ class ChatClient : public QObject
 public:
     explicit ChatClient(QObject* parent = nullptr);
 
-    void connectToServer(const QString& host, quint16 port, const QString& pseudo);
+    void connectToServer(const QString& host, quint16 port);
     void disconnectFromServer();
+
+    // Auth
+    void sendRegister(const QString& username, const QString& password);
+    void sendLogin(const QString& username, const QString& password);
+    void sendGuest(const QString& pseudo);
 
     void sendMessage(const QString& text);
     void sendWizz();
@@ -25,6 +30,11 @@ signals:
     void connected();
     void disconnected();
     void errorOccurred(const QString& message);
+
+    void authOk(const QString& info);
+    void authFail(const QString& reason);
+    void contactsReceived(const QString& payload);
+    void privateReceived(const QString& from, const QString& to, const QString& content);
 
     void messageReceived(const QString& author, const QString& content);
     void wizzReceived(const QString& author);

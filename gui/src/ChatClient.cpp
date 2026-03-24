@@ -12,10 +12,8 @@ ChatClient::ChatClient(QObject* parent)
     connect(m_socket, &QTcpSocket::errorOccurred, this, &ChatClient::onError);
 }
 
-void ChatClient::connectToServer(const QString& host, quint16 port, const QString& pseudo)
+void ChatClient::connectToServer(const QString& host, quint16 port)
 {
-    m_pseudo = pseudo;
-
     if (m_socket->state() != QAbstractSocket::UnconnectedState)
         m_socket->abort();
 
@@ -31,9 +29,37 @@ void ChatClient::disconnectFromServer()
         return;
     }
 
-    Message deco(Message::Type::DECONNEXION, m_pseudo.toStdString());
-    sendMessageObject(deco);
+    if (!m_pseudo.trimmed().isEmpty())
+        sendMessageObject(Message(Message::Type::DECONNEXION, m_pseudo.toStdString()));
     m_socket->disconnectFromHost();
+}
+
+void ChatClient::sendRegister(const QString& username, const QString& password)
+{
+    if (!isConnected())
+        return;
+    sendMessageObject(Message(Message::Type::REGISTER,
+                              username.toStdString(),
+                              password.toStdString()));
+}
+
+void ChatClient::sendLogin(const QString& username, const QString& password)
+{
+    if (!isConnected())
+        return;
+    // Store pseudo locally for the UI. (Server may adjust duplicates later.)
+    m_pseudo = username;
+    sendMessageObject(Message(Message::Type::LOGIN,
+                              username.toStdString(),
+                              password.toStdString()));
+}
+
+void ChatClient::sendGuest(const QString& pseudo)
+{
+    if (!isConnected())
+        return;
+    m_pseudo = pseudo;
+    sendMessageObject(Message(Message::Type::CONNEXION, pseudo.toStdString()));
 }
 
 void ChatClient::sendMessage(const QString& text)
@@ -66,8 +92,6 @@ QString ChatClient::pseudo() const
 
 void ChatClient::onConnected()
 {
-    Message co(Message::Type::CONNEXION, m_pseudo.toStdString());
-    sendMessageObject(co);
     emit connected();
 }
 
@@ -117,6 +141,20 @@ void ChatClient::handleLine(const QByteArray& line)
 
     switch (msg.getType())
     {
+    case Message::Type::AUTH_OK:
+        emit authOk(QString::fromStdString(msg.getContenu()));
+        break;
+    case Message::Type::AUTH_FAIL:
+        emit authFail(QString::fromStdString(msg.getContenu()));
+        break;
+    case Message::Type::CONTACTS:
+        emit contactsReceived(QString::fromStdString(msg.getContenu()));
+        break;
+    case Message::Type::PRIVE:
+        emit privateReceived(QString::fromStdString(msg.getAuteur()),
+                             QString::fromStdString(msg.getCible()),
+                             QString::fromStdString(msg.getContenu()));
+        break;
     case Message::Type::MESSAGE:
         emit messageReceived(QString::fromStdString(msg.getAuteur()),
                              QString::fromStdString(msg.getContenu()));

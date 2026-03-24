@@ -19,6 +19,8 @@
 #include <QStyle>
 #include <QTimer>
 
+static constexpr const char* kGlobalKey = "__global__";
+
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
 {
@@ -119,6 +121,7 @@ MainWindow::MainWindow(QWidget* parent)
     m_contacts = new QListWidget(m_pageMessenger);
     m_contacts->setFixedWidth(220);
     m_contacts->setStyleSheet("font-family: Segoe UI; font-size: 10.5pt;");
+    m_contacts->setSelectionMode(QAbstractItemView::SingleSelection);
 
     middle->addWidget(m_chat, 1);
     middle->addWidget(m_contacts);
@@ -162,6 +165,20 @@ MainWindow::MainWindow(QWidget* parent)
     connect(m_client, &ChatClient::wizzReceived, this, &MainWindow::onWizz);
     connect(m_client, &ChatClient::userConnected, this, &MainWindow::onUserConnected);
     connect(m_client, &ChatClient::userDisconnected, this, &MainWindow::onUserDisconnected);
+    connect(m_contacts, &QListWidget::itemClicked, this, [this](QListWidgetItem* item) {
+        if (!item)
+            return;
+        const QString key = item->data(Qt::UserRole).toString();
+        if (key == kGlobalKey)
+            m_currentTarget.clear();
+        else
+            m_currentTarget = key;
+
+        // clear unread
+        if (!m_currentTarget.isEmpty())
+            m_unread[m_currentTarget] = 0;
+        redrawConversation();
+    });
 
     setPageLogin();
     setUiConnected(false);
@@ -219,8 +236,19 @@ void MainWindow::onSendClicked()
         return;
     }
 
-    m_client->sendMessage(text);
-    appendChatLine(m_client->pseudo(), text);
+    const QString t = QDateTime::currentDateTime().toString("HH:mm");
+    if (m_currentTarget.isEmpty())
+    {
+        m_client->sendMessage(text);
+        m_history[kGlobalKey].push_back(ChatEntry{m_client->pseudo(), text, t});
+        appendChatLine(m_client->pseudo(), text);
+    }
+    else
+    {
+        m_client->sendPrivate(m_currentTarget, text);
+        m_history[m_currentTarget].push_back(ChatEntry{m_client->pseudo(), text, t});
+        appendChatLine(m_client->pseudo(), text);
+    }
     m_input->clear();
     m_input->setFocus();
 }
@@ -290,7 +318,18 @@ void MainWindow::onAuthOk(const QString& info)
         appendSystem(QString("<span style='color:#090'><b>AUTH OK</b></span> %1").arg(info.toHtmlEscaped()));
         setUiConnected(true);
         m_contacts->clear();
+        // Global chat entry
+        {
+            auto* global = new QListWidgetItem("Salon (global)", m_contacts);
+            global->setData(Qt::UserRole, QString::fromUtf8(kGlobalKey));
+            global->setIcon(style()->standardIcon(QStyle::SP_DesktopIcon));
+            m_contacts->addItem(global);
+            m_contacts->setCurrentItem(global);
+        }
+
         upsertContact(m_client->pseudo(), true);
+        m_currentTarget.clear();
+        redrawConversation();
         return;
     }
 }
@@ -303,21 +342,51 @@ void MainWindow::onAuthFail(const QString& reason)
 
 void MainWindow::onContacts(const QString& payload)
 {
-    // Étape 3: on fera un vrai parsing + pastilles online/offline.
-    // Pour l’instant on log seulement.
-    appendSystem(QString("<i>Contacts:</i> %1").arg(payload.toHtmlEscaped()));
+    // Format: "name=1;other=0;..."
+    const QStringList parts = payload.split(';', Qt::SkipEmptyParts);
+    for (const QString& p : parts)
+    {
+        const int eq = p.indexOf('=');
+        if (eq <= 0)
+            continue;
+        const QString name = p.left(eq).trimmed();
+        const QString val = p.mid(eq + 1).trimmed();
+        const bool online = (val == "1");
+        if (name.isEmpty())
+            continue;
+        if (name.compare(m_client->pseudo(), Qt::CaseInsensitive) == 0)
+            continue;
+        upsertContact(name, false);
+        setContactOnline(name, online);
+    }
 }
 
 void MainWindow::onPrivate(const QString& from, const QString& to, const QString& content)
 {
     Q_UNUSED(to);
-    // Étape 3: routing par contact. Pour l’instant, afficher dans le flux.
-    appendChatLine(from, content);
+    const QString t = QDateTime::currentDateTime().toString("HH:mm");
+    const QString key = from;
+    m_history[key].push_back(ChatEntry{from, content, t});
+
+    if (m_currentTarget.compare(key, Qt::CaseInsensitive) != 0)
+    {
+        m_unread[key] = m_unread.value(key, 0) + 1;
+        QApplication::beep();
+    }
+    else
+    {
+        appendChatLine(from, content);
+    }
+
+    upsertContact(key, false);
 }
 
 void MainWindow::onMessage(const QString& author, const QString& content)
 {
-    appendChatLine(author, content);
+    const QString t = QDateTime::currentDateTime().toString("HH:mm");
+    m_history[kGlobalKey].push_back(ChatEntry{author, content, t});
+    if (m_currentTarget.isEmpty())
+        appendChatLine(author, content);
 }
 
 void MainWindow::onWizz(const QString& author)
@@ -366,6 +435,58 @@ void MainWindow::appendChatLine(const QString& author, const QString& content)
         "  </div>"
         "</div>"
     ).arg(align, bubbleBorder, bubbleBg, a, t.toHtmlEscaped(), c));
+}
+
+void MainWindow::redrawConversation()
+{
+    m_chat->clear();
+
+    const QString key = m_currentTarget.isEmpty() ? QString::fromUtf8(kGlobalKey) : m_currentTarget;
+    const auto items = m_history.value(key);
+
+    if (m_currentTarget.isEmpty())
+        appendSystem("<i>Salon global</i>");
+    else
+        appendSystem(QString("<i>Conversation avec <b>%1</b></i>").arg(m_currentTarget.toHtmlEscaped()));
+
+    for (const auto& e : items)
+    {
+        // render using bubble HTML but keep time from stored entry
+        const bool isSelf = e.author.trimmed().compare(m_client->pseudo().trimmed(), Qt::CaseInsensitive) == 0;
+        const QString a = e.author.toHtmlEscaped();
+        const QString c = e.content.toHtmlEscaped();
+        const QString time = e.time.toHtmlEscaped();
+
+        const QString align = isSelf ? "right" : "left";
+        const QString bubbleBg = isSelf ? "#d6f5d6" : "#ffffff";
+        const QString bubbleBorder = isSelf ? "#a6e3a6" : "#d6ddf0";
+
+        m_chat->append(QString(
+            "<div style='text-align:%1; margin:10px 0;'>"
+            "  <div style='display:inline-block; max-width:70%%; padding:10px 12px;"
+            "              border:1px solid %2; border-radius:14px; background:%3;'>"
+            "    <div style='font-size:9.5pt; color:#5a6b88; margin-bottom:4px;'>"
+            "      <b>%4</b> <span style='color:#8aa0c4'>&nbsp;•&nbsp;%5</span>"
+            "    </div>"
+            "    <div style='font-size:11pt; color:#10223a; white-space:pre-wrap;'>%6</div>"
+            "  </div>"
+            "</div>"
+        ).arg(align, bubbleBorder, bubbleBg, a, time, c));
+    }
+
+    // update unread badges in list
+    for (int i = 0; i < m_contacts->count(); ++i)
+    {
+        auto* it = m_contacts->item(i);
+        if (!it) continue;
+        const QString base = it->data(Qt::UserRole).toString();
+        if (base == kGlobalKey) continue;
+        const int u = m_unread.value(base, 0);
+        const QString rawName = base;
+        const QString label = (u > 0) ? QString("%1 (%2)").arg(rawName).arg(u) : rawName;
+        if (it->text() != label && !it->text().startsWith(rawName + " (toi)"))
+            it->setText(label);
+    }
 }
 
 void MainWindow::showWizzEffect(const QString& author)
@@ -499,7 +620,7 @@ void MainWindow::upsertContact(const QString& name, bool isSelf)
     const QString label = isSelf ? QString("%1 (toi)").arg(trimmed) : trimmed;
     auto* item = new QListWidgetItem(label, m_contacts);
     item->setData(Qt::UserRole, trimmed);
-    item->setIcon(makeAvatarIcon(trimmed, isSelf));
+    item->setIcon(makeAvatarIcon(trimmed, isSelf, true));
 
     if (isSelf)
         m_contacts->insertItem(0, item);
@@ -527,7 +648,23 @@ void MainWindow::removeContact(const QString& name)
     }
 }
 
-QIcon MainWindow::makeAvatarIcon(const QString& name, bool isSelf) const
+void MainWindow::setContactOnline(const QString& name, bool online)
+{
+    const QString trimmed = name.trimmed();
+    for (int i = 0; i < m_contacts->count(); ++i)
+    {
+        auto* item = m_contacts->item(i);
+        if (!item) continue;
+        const QString base = item->data(Qt::UserRole).toString();
+        if (base.compare(trimmed, Qt::CaseInsensitive) != 0)
+            continue;
+        item->setIcon(makeAvatarIcon(trimmed, false, online));
+        item->setData(Qt::UserRole + 1, online);
+        return;
+    }
+}
+
+QIcon MainWindow::makeAvatarIcon(const QString& name, bool isSelf, bool online) const
 {
     const int size = 36;
     QPixmap pm(size, size);
@@ -562,6 +699,17 @@ QIcon MainWindow::makeAvatarIcon(const QString& name, bool isSelf) const
     p.drawText(QRect(0, 0, size, size), Qt::AlignCenter, initial);
 
     p.end();
+
+    // Online/offline dot
+    QPainter d(&pm);
+    d.setRenderHint(QPainter::Antialiasing, true);
+    const int dot = 10;
+    const int pad = 2;
+    const QRect r(size - dot - pad, size - dot - pad, dot, dot);
+    d.setPen(QPen(QColor(255, 255, 255), 2));
+    d.setBrush(online ? QColor(0, 200, 80) : QColor(220, 60, 60));
+    d.drawEllipse(r);
+    d.end();
     return QIcon(pm);
 }
 

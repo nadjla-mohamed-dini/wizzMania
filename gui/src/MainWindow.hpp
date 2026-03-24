@@ -42,13 +42,15 @@ private slots:
 private:
     void appendSystem(const QString& html);
     void appendChatLine(const QString& author, const QString& content);
+    void redrawConversation();
     void showWizzEffect(const QString& author);
     void setUiConnected(bool connected);
     void startShake();
     void startFlash();
     void upsertContact(const QString& name, bool isSelf);
     void removeContact(const QString& name);
-    QIcon makeAvatarIcon(const QString& name, bool isSelf) const;
+    void setContactOnline(const QString& name, bool online);
+    QIcon makeAvatarIcon(const QString& name, bool isSelf, bool online) const;
     void setPageLogin();
     void setPageMessenger();
 
@@ -85,5 +87,16 @@ private:
 
     QPoint m_shakeOrigin;
     int m_shakeStep = 0;
+
+    // Conversations
+    struct ChatEntry
+    {
+        QString author;
+        QString content;
+        QString time;
+    };
+    QString m_currentTarget; // empty = global
+    QHash<QString, QVector<ChatEntry>> m_history; // key = contact or "__global__"
+    QHash<QString, int> m_unread; // key = contact
 };
 

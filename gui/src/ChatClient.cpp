@@ -71,6 +71,20 @@ void ChatClient::sendMessage(const QString& text)
     sendMessageObject(msg);
 }
 
+void ChatClient::sendPrivate(const QString& to, const QString& text)
+{
+    if (!isConnected())
+        return;
+    if (to.trimmed().isEmpty())
+        return;
+
+    Message msg(Message::Type::PRIVE,
+                m_pseudo.toStdString(),
+                to.toStdString(),
+                text.toStdString());
+    sendMessageObject(msg);
+}
+
 void ChatClient::sendWizz()
 {
     if (!isConnected())

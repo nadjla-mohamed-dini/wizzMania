@@ -21,6 +21,7 @@ public:
     void sendGuest(const QString& pseudo);
 
     void sendMessage(const QString& text);
+    void sendPrivate(const QString& to, const QString& text);
     void sendWizz();
 
     bool isConnected() const;

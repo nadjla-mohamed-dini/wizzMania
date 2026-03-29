@@ -25,6 +25,7 @@ private slots:
     void onDisconnectClicked();
     void onSendClicked();
     void onWizzClicked();
+    void onEmojiClicked();
 
     void onConnected();
     void onDisconnected();
@@ -82,6 +83,7 @@ private:
     QListWidget* m_contacts = nullptr;
 
     QLineEdit* m_input = nullptr;
+    QPushButton* m_emojiBtn = nullptr;
     QPushButton* m_sendBtn = nullptr;
     QPushButton* m_wizzBtn = nullptr;
 

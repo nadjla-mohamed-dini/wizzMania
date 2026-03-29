@@ -6,6 +6,7 @@
 #include <QGraphicsDropShadowEffect>
 #include <QIcon>
 #include <QListWidget>
+#include <QMenu>
 #include <QPainter>
 #include <QPixmap>
 #include <QStackedWidget>
@@ -130,11 +131,16 @@ MainWindow::MainWindow(QWidget* parent)
     auto* bottom = new QHBoxLayout();
     m_input = new QLineEdit(m_pageMessenger);
     m_input->setPlaceholderText("Écris ton message…");
+    m_emojiBtn = new QPushButton(QString::fromUtf8(u8"🙂"), m_pageMessenger);
+    m_emojiBtn->setToolTip("Emojis");
+    m_emojiBtn->setFixedWidth(44);
+    m_emojiBtn->setStyleSheet("font-size: 14pt; padding: 2px 6px;");
     m_sendBtn = new QPushButton("Send", m_pageMessenger);
     m_sendBtn->setIcon(style()->standardIcon(QStyle::SP_ArrowRight));
     m_wizzBtn = new QPushButton("Wizz", m_pageMessenger);
     m_wizzBtn->setObjectName("wizzBtn");
     m_wizzBtn->setIcon(style()->standardIcon(QStyle::SP_MessageBoxInformation));
+    bottom->addWidget(m_emojiBtn);
     bottom->addWidget(m_input, 1);
     bottom->addWidget(m_sendBtn);
     bottom->addWidget(m_wizzBtn);
@@ -152,6 +158,7 @@ MainWindow::MainWindow(QWidget* parent)
     connect(m_disconnectBtn, &QPushButton::clicked, this, &MainWindow::onDisconnectClicked);
     connect(m_sendBtn, &QPushButton::clicked, this, &MainWindow::onSendClicked);
     connect(m_wizzBtn, &QPushButton::clicked, this, &MainWindow::onWizzClicked);
+    connect(m_emojiBtn, &QPushButton::clicked, this, &MainWindow::onEmojiClicked);
     connect(m_input, &QLineEdit::returnPressed, this, &MainWindow::onSendClicked);
 
     connect(m_client, &ChatClient::connected, this, &MainWindow::onConnected);
@@ -265,6 +272,44 @@ void MainWindow::onWizzClicked()
     appendSystem("<b>Tu as envoyé un Wizz.</b>");
 }
 
+void MainWindow::onEmojiClicked()
+{
+    if (!m_input)
+        return;
+
+    QMenu menu(this);
+    menu.setStyleSheet("QMenu { font-size: 14pt; }");
+
+    const QStringList emojis = {
+        QString::fromUtf8(u8"😀"), QString::fromUtf8(u8"😁"), QString::fromUtf8(u8"😂"),
+        QString::fromUtf8(u8"🤣"), QString::fromUtf8(u8"😊"), QString::fromUtf8(u8"😍"),
+        QString::fromUtf8(u8"😘"), QString::fromUtf8(u8"😎"), QString::fromUtf8(u8"🤔"),
+        QString::fromUtf8(u8"😅"), QString::fromUtf8(u8"😭"), QString::fromUtf8(u8"😡"),
+        QString::fromUtf8(u8"👍"), QString::fromUtf8(u8"👎"), QString::fromUtf8(u8"🙏"),
+        QString::fromUtf8(u8"👏"), QString::fromUtf8(u8"🔥"), QString::fromUtf8(u8"💯"),
+        QString::fromUtf8(u8"❤️"), QString::fromUtf8(u8"💙"), QString::fromUtf8(u8"✨"),
+        QString::fromUtf8(u8"🎉"), QString::fromUtf8(u8"😴"), QString::fromUtf8(u8"🙃")
+    };
+
+    // Display as a compact grid-ish menu: 8 per row using separators
+    int col = 0;
+    for (const QString& e : emojis)
+    {
+        QAction* a = menu.addAction(e);
+        connect(a, &QAction::triggered, this, [this, e]() {
+            m_input->insert(e);
+            m_input->setFocus();
+        });
+
+        col++;
+        if (col % 8 == 0)
+            menu.addSeparator();
+    }
+
+    const QPoint pos = m_emojiBtn ? m_emojiBtn->mapToGlobal(QPoint(0, m_emojiBtn->height())) : QCursor::pos();
+    menu.exec(pos);
+}
+
 void MainWindow::onConnected()
 {
     // TCP connected: send pending auth action now.
@@ -368,10 +413,12 @@ void MainWindow::onPrivate(const QString& from, const QString& to, const QString
     const QString key = from;
     m_history[key].push_back(ChatEntry{from, content, t});
 
+    // Notification sonore: 1 beep pour un message privé entrant
+    QApplication::beep();
+
     if (m_currentTarget.compare(key, Qt::CaseInsensitive) != 0)
     {
         m_unread[key] = m_unread.value(key, 0) + 1;
-        QApplication::beep();
     }
     else
     {
@@ -421,20 +468,22 @@ void MainWindow::appendChatLine(const QString& author, const QString& content)
     const QString t = QDateTime::currentDateTime().toString("HH:mm");
 
     const QString align = isSelf ? "right" : "left";
-    const QString bubbleBg = isSelf ? "#d6f5d6" : "#ffffff";
-    const QString bubbleBorder = isSelf ? "#a6e3a6" : "#d6ddf0";
+    const QString bubbleBg = isSelf ? "#c9f7c7" : "#eaf2ff";
+    const QString bubbleBorder = isSelf ? "#6ad66a" : "#9dbaf0";
+    const QString shadow = isSelf ? "rgba(106,214,106,0.20)" : "rgba(77,123,224,0.18)";
 
     m_chat->append(QString(
         "<div style='text-align:%1; margin:10px 0;'>"
-        "  <div style='display:inline-block; max-width:70%%; padding:10px 12px;"
-        "              border:1px solid %2; border-radius:14px; background:%3;'>"
+        "  <div style='display:inline-block; max-width:72%%; padding:10px 12px;"
+        "              border:1px solid %2; border-radius:14px; background:%3;"
+        "              box-shadow: 0 6px 16px %4;'>"
         "    <div style='font-size:9.5pt; color:#5a6b88; margin-bottom:4px;'>"
-        "      <b>%4</b> <span style='color:#8aa0c4'>&nbsp;•&nbsp;%5</span>"
+        "      <b>%5</b> <span style='color:#8aa0c4'>&nbsp;•&nbsp;%6</span>"
         "    </div>"
-        "    <div style='font-size:11pt; color:#10223a; white-space:pre-wrap;'>%6</div>"
+        "    <div style='font-size:11pt; color:#10223a; white-space:pre-wrap;'>%7</div>"
         "  </div>"
         "</div>"
-    ).arg(align, bubbleBorder, bubbleBg, a, t.toHtmlEscaped(), c));
+    ).arg(align, bubbleBorder, bubbleBg, shadow, a, t.toHtmlEscaped(), c));
 }
 
 void MainWindow::redrawConversation()
@@ -458,20 +507,22 @@ void MainWindow::redrawConversation()
         const QString time = e.time.toHtmlEscaped();
 
         const QString align = isSelf ? "right" : "left";
-        const QString bubbleBg = isSelf ? "#d6f5d6" : "#ffffff";
-        const QString bubbleBorder = isSelf ? "#a6e3a6" : "#d6ddf0";
+        const QString bubbleBg = isSelf ? "#c9f7c7" : "#eaf2ff";
+        const QString bubbleBorder = isSelf ? "#6ad66a" : "#9dbaf0";
+        const QString shadow = isSelf ? "rgba(106,214,106,0.20)" : "rgba(77,123,224,0.18)";
 
         m_chat->append(QString(
             "<div style='text-align:%1; margin:10px 0;'>"
-            "  <div style='display:inline-block; max-width:70%%; padding:10px 12px;"
-            "              border:1px solid %2; border-radius:14px; background:%3;'>"
+            "  <div style='display:inline-block; max-width:72%%; padding:10px 12px;"
+            "              border:1px solid %2; border-radius:14px; background:%3;"
+            "              box-shadow: 0 6px 16px %4;'>"
             "    <div style='font-size:9.5pt; color:#5a6b88; margin-bottom:4px;'>"
-            "      <b>%4</b> <span style='color:#8aa0c4'>&nbsp;•&nbsp;%5</span>"
+            "      <b>%5</b> <span style='color:#8aa0c4'>&nbsp;•&nbsp;%6</span>"
             "    </div>"
-            "    <div style='font-size:11pt; color:#10223a; white-space:pre-wrap;'>%6</div>"
+            "    <div style='font-size:11pt; color:#10223a; white-space:pre-wrap;'>%7</div>"
             "  </div>"
             "</div>"
-        ).arg(align, bubbleBorder, bubbleBg, a, time, c));
+        ).arg(align, bubbleBorder, bubbleBg, shadow, a, time, c));
     }
 
     // update unread badges in list
@@ -491,7 +542,9 @@ void MainWindow::redrawConversation()
 
 void MainWindow::showWizzEffect(const QString& author)
 {
+    // Notification sonore: 2 beeps pour un Wizz
     QApplication::beep();
+    QTimer::singleShot(140, [] { QApplication::beep(); });
     QApplication::alert(this, 0);
 
     appendSystem(QString(

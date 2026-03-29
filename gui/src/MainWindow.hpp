@@ -2,6 +2,9 @@
 
 #include "ChatClient.hpp"
 #include <QMainWindow>
+#include <QHash>
+#include <QSet>
+#include <QVector>
 
 class QTextBrowser;
 class QLineEdit;
@@ -44,8 +47,7 @@ private:
     void appendSystem(const QString& html);
     void appendChatLine(const QString& author, const QString& content);
     void redrawConversation();
-    void refreshContactBadge(const QString& name);
-    void refreshAllContactBadges();
+    void rebuildContactsList();
     void showWizzEffect(const QString& author);
     void setUiConnected(bool connected);
     void startShake();
@@ -82,6 +84,7 @@ private:
     QLabel* m_status = nullptr;
     QLabel* m_me = nullptr;
     QPushButton* m_disconnectBtn = nullptr;
+    QLineEdit* m_contactSearch = nullptr;
     QListWidget* m_contacts = nullptr;
 
     QLineEdit* m_input = nullptr;
@@ -102,5 +105,9 @@ private:
     QString m_currentTarget; // empty = global
     QHash<QString, QVector<ChatEntry>> m_history; // key = contact or "__global__"
     QHash<QString, int> m_unread; // key = contact
+
+    QString m_selfName;
+    QSet<QString> m_knownContacts;
+    QHash<QString, bool> m_contactOnline;
 };
 

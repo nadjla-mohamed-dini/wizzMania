@@ -119,13 +119,24 @@ MainWindow::MainWindow(QWidget* parent)
     m_chat->setOpenExternalLinks(false);
     m_chat->setStyleSheet("font-family: Segoe UI; font-size: 11pt;");
 
+    auto* contactsPane = new QWidget(m_pageMessenger);
+    auto* contactsLayout = new QVBoxLayout(contactsPane);
+    contactsLayout->setContentsMargins(0, 0, 0, 0);
+    contactsLayout->setSpacing(8);
+
+    m_contactSearch = new QLineEdit(contactsPane);
+    m_contactSearch->setPlaceholderText("Rechercher…");
+
     m_contacts = new QListWidget(m_pageMessenger);
     m_contacts->setFixedWidth(220);
     m_contacts->setStyleSheet("font-family: Segoe UI; font-size: 10.5pt;");
     m_contacts->setSelectionMode(QAbstractItemView::SingleSelection);
 
+    contactsLayout->addWidget(m_contactSearch);
+    contactsLayout->addWidget(m_contacts, 1);
+
     middle->addWidget(m_chat, 1);
-    middle->addWidget(m_contacts);
+    middle->addWidget(contactsPane);
     chatRoot->addLayout(middle, 1);
 
     auto* bottom = new QHBoxLayout();
@@ -172,6 +183,11 @@ MainWindow::MainWindow(QWidget* parent)
     connect(m_client, &ChatClient::wizzReceived, this, &MainWindow::onWizz);
     connect(m_client, &ChatClient::userConnected, this, &MainWindow::onUserConnected);
     connect(m_client, &ChatClient::userDisconnected, this, &MainWindow::onUserDisconnected);
+
+    connect(m_contactSearch, &QLineEdit::textChanged, this, [this](const QString&) {
+        rebuildContactsList();
+    });
+
     connect(m_contacts, &QListWidget::itemClicked, this, [this](QListWidgetItem* item) {
         if (!item)
             return;
@@ -184,8 +200,7 @@ MainWindow::MainWindow(QWidget* parent)
         // clear unread
         if (!m_currentTarget.isEmpty())
             m_unread[m_currentTarget] = 0;
-        if (key != kGlobalKey)
-            refreshContactBadge(key);
+        rebuildContactsList();
         redrawConversation();
     });
 
@@ -332,6 +347,12 @@ void MainWindow::onDisconnected()
     appendSystem("<span style='color:#666'><b>Déconnecté.</b></span>");
     setUiConnected(false);
     m_contacts->clear();
+    m_knownContacts.clear();
+    m_contactOnline.clear();
+    m_unread.clear();
+    m_history.clear();
+    m_currentTarget.clear();
+    m_selfName.clear();
     setPageLogin();
 }
 
@@ -361,21 +382,14 @@ void MainWindow::onAuthOk(const QString& info)
         m_loginStatus->setText("");
         setPageMessenger();
 
-        m_me->setText(QString("Connecté: %1").arg(m_client->pseudo().toHtmlEscaped()));
+        m_selfName = m_client->pseudo();
+        m_me->setText(QString("Connecté: %1").arg(m_selfName.toHtmlEscaped()));
         appendSystem(QString("<span style='color:#090'><b>AUTH OK</b></span> %1").arg(info.toHtmlEscaped()));
         setUiConnected(true);
-        m_contacts->clear();
-        // Global chat entry
-        {
-            auto* global = new QListWidgetItem("Salon (global)", m_contacts);
-            global->setData(Qt::UserRole, QString::fromUtf8(kGlobalKey));
-            global->setIcon(style()->standardIcon(QStyle::SP_DesktopIcon));
-            m_contacts->addItem(global);
-            m_contacts->setCurrentItem(global);
-        }
-
-        upsertContact(m_client->pseudo(), true);
+        m_knownContacts.clear();
+        m_contactOnline.clear();
         m_currentTarget.clear();
+        rebuildContactsList();
         redrawConversation();
         return;
     }
@@ -401,12 +415,12 @@ void MainWindow::onContacts(const QString& payload)
         const bool online = (val == "1");
         if (name.isEmpty())
             continue;
-        if (name.compare(m_client->pseudo(), Qt::CaseInsensitive) == 0)
+        if (name.compare(m_selfName, Qt::CaseInsensitive) == 0)
             continue;
-        upsertContact(name, false);
-        setContactOnline(name, online);
-        refreshContactBadge(name);
+        m_knownContacts.insert(name);
+        m_contactOnline[name] = online;
     }
+    rebuildContactsList();
 }
 
 void MainWindow::onPrivate(const QString& from, const QString& to, const QString& content)
@@ -419,17 +433,20 @@ void MainWindow::onPrivate(const QString& from, const QString& to, const QString
     // Notification sonore: 1 beep pour un message privé entrant
     QApplication::beep();
 
+    m_knownContacts.insert(key);
+    m_contactOnline[key] = true;
+
     if (m_currentTarget.compare(key, Qt::CaseInsensitive) != 0)
     {
         m_unread[key] = m_unread.value(key, 0) + 1;
-        refreshContactBadge(key);
+        rebuildContactsList();
     }
     else
     {
         appendChatLine(from, content);
     }
 
-    upsertContact(key, false);
+    rebuildContactsList();
 }
 
 void MainWindow::onMessage(const QString& author, const QString& content)
@@ -448,13 +465,16 @@ void MainWindow::onWizz(const QString& author)
 void MainWindow::onUserConnected(const QString& author)
 {
     appendSystem(QString("<b>%1</b> s'est connecté.").arg(author.toHtmlEscaped()));
-    upsertContact(author, false);
+    m_knownContacts.insert(author);
+    m_contactOnline[author] = true;
+    rebuildContactsList();
 }
 
 void MainWindow::onUserDisconnected(const QString& author)
 {
     appendSystem(QString("<b>%1</b> s'est déconnecté.").arg(author.toHtmlEscaped()));
-    removeContact(author);
+    m_contactOnline[author] = false;
+    rebuildContactsList();
 }
 
 void MainWindow::appendSystem(const QString& html)
@@ -528,65 +548,82 @@ void MainWindow::redrawConversation()
             "</div>"
         ).arg(align, bubbleBorder, bubbleBg, shadow, a, time, c));
     }
-    refreshAllContactBadges();
 }
 
-void MainWindow::refreshAllContactBadges()
+void MainWindow::rebuildContactsList()
 {
-    for (int i = 0; i < m_contacts->count(); ++i)
-    {
-        auto* it = m_contacts->item(i);
-        if (!it) continue;
-        const QString key = it->data(Qt::UserRole).toString();
-        if (key == kGlobalKey)
-            continue;
-        refreshContactBadge(key);
-    }
-}
-
-void MainWindow::refreshContactBadge(const QString& name)
-{
-    const QString trimmed = name.trimmed();
-    if (trimmed.isEmpty() || !m_contacts)
+    if (!m_contacts)
         return;
 
-    for (int i = 0; i < m_contacts->count(); ++i)
+    const QString preserveKey = m_currentTarget.isEmpty() ? QString::fromUtf8(kGlobalKey) : m_currentTarget;
+    const QString q = m_contactSearch ? m_contactSearch->text().trimmed().toLower() : QString();
+
+    QStringList online;
+    QStringList offline;
+    for (const QString& name : m_knownContacts)
     {
-        auto* it = m_contacts->item(i);
-        if (!it) continue;
-        const QString key = it->data(Qt::UserRole).toString();
-        if (key.compare(trimmed, Qt::CaseInsensitive) != 0)
+        if (name.trimmed().isEmpty())
+            continue;
+        if (!m_selfName.isEmpty() && name.compare(m_selfName, Qt::CaseInsensitive) == 0)
+            continue;
+        if (!q.isEmpty() && !name.toLower().contains(q))
             continue;
 
-        const bool isSelf = trimmed.compare(m_client->pseudo(), Qt::CaseInsensitive) == 0;
-        const int u = isSelf ? 0 : m_unread.value(trimmed, 0);
+        const bool isOn = m_contactOnline.value(name, false);
+        (isOn ? online : offline).push_back(name);
+    }
 
-        // Preserve "(toi)" label if it exists
-        if (isSelf)
-        {
-            it->setText(QString("%1 (toi)").arg(trimmed));
-        }
-        else
-        {
-            it->setText(u > 0 ? QString("%1 (%2)").arg(trimmed).arg(u) : trimmed);
-        }
+    auto ciLess = [](const QString& a, const QString& b) {
+        return QString::compare(a, b, Qt::CaseInsensitive) < 0;
+    };
+    std::sort(online.begin(), online.end(), ciLess);
+    std::sort(offline.begin(), offline.end(), ciLess);
+
+    m_contacts->clear();
+
+    // Global chat entry always on top
+    auto* global = new QListWidgetItem("Salon (global)", m_contacts);
+    global->setData(Qt::UserRole, QString::fromUtf8(kGlobalKey));
+    global->setIcon(style()->standardIcon(QStyle::SP_DesktopIcon));
+    m_contacts->addItem(global);
+
+    auto addContact = [&](const QString& name, bool isOn) {
+        const int u = m_unread.value(name, 0);
+        auto* it = new QListWidgetItem(m_contacts);
+        it->setData(Qt::UserRole, name);
+        it->setData(Qt::UserRole + 1, isOn);
+        it->setIcon(makeAvatarIcon(name, false, isOn));
+        it->setText(u > 0 ? QString("%1 (%2)").arg(name).arg(u) : name);
 
         QFont f = it->font();
         f.setBold(u > 0);
         it->setFont(f);
-
         if (u > 0)
         {
-            it->setBackground(QColor(255, 245, 200)); // soft highlight
+            it->setBackground(QColor(255, 245, 200));
             it->setForeground(QColor(35, 45, 70));
         }
-        else
+    };
+
+    for (const auto& n : online) addContact(n, true);
+    for (const auto& n : offline) addContact(n, false);
+
+    // Restore selection
+    QListWidgetItem* toSelect = nullptr;
+    for (int i = 0; i < m_contacts->count(); ++i)
+    {
+        auto* it = m_contacts->item(i);
+        if (!it) continue;
+        const QString key = it->data(Qt::UserRole).toString();
+        if (key == preserveKey)
         {
-            it->setBackground(QBrush());
-            it->setForeground(QBrush());
+            toSelect = it;
+            break;
         }
-        return;
     }
+    if (!toSelect)
+        toSelect = global;
+    m_contacts->setCurrentItem(toSelect);
 }
 
 void MainWindow::showWizzEffect(const QString& author)

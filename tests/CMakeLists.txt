@@ -13,6 +13,9 @@ FetchContent_MakeAvailable(catch2)
 
 add_executable(tests_wizzmania
   src/test_message.cpp
+  src/test_userstore.cpp
+  src/test_integration.cpp
+  ../serveur/src/UserStore.cpp
 )
 
 target_link_libraries(tests_wizzmania
@@ -24,6 +27,7 @@ target_link_libraries(tests_wizzmania
 target_include_directories(tests_wizzmania
   PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/serveur/include
 )
 
 message(STATUS "Tests WIZZ Mania configurés (Catch2)")

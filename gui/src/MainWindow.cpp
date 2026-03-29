@@ -184,6 +184,8 @@ MainWindow::MainWindow(QWidget* parent)
         // clear unread
         if (!m_currentTarget.isEmpty())
             m_unread[m_currentTarget] = 0;
+        if (key != kGlobalKey)
+            refreshContactBadge(key);
         redrawConversation();
     });
 
@@ -403,6 +405,7 @@ void MainWindow::onContacts(const QString& payload)
             continue;
         upsertContact(name, false);
         setContactOnline(name, online);
+        refreshContactBadge(name);
     }
 }
 
@@ -419,6 +422,7 @@ void MainWindow::onPrivate(const QString& from, const QString& to, const QString
     if (m_currentTarget.compare(key, Qt::CaseInsensitive) != 0)
     {
         m_unread[key] = m_unread.value(key, 0) + 1;
+        refreshContactBadge(key);
     }
     else
     {
@@ -524,19 +528,64 @@ void MainWindow::redrawConversation()
             "</div>"
         ).arg(align, bubbleBorder, bubbleBg, shadow, a, time, c));
     }
+    refreshAllContactBadges();
+}
 
-    // update unread badges in list
+void MainWindow::refreshAllContactBadges()
+{
     for (int i = 0; i < m_contacts->count(); ++i)
     {
         auto* it = m_contacts->item(i);
         if (!it) continue;
-        const QString base = it->data(Qt::UserRole).toString();
-        if (base == kGlobalKey) continue;
-        const int u = m_unread.value(base, 0);
-        const QString rawName = base;
-        const QString label = (u > 0) ? QString("%1 (%2)").arg(rawName).arg(u) : rawName;
-        if (it->text() != label && !it->text().startsWith(rawName + " (toi)"))
-            it->setText(label);
+        const QString key = it->data(Qt::UserRole).toString();
+        if (key == kGlobalKey)
+            continue;
+        refreshContactBadge(key);
+    }
+}
+
+void MainWindow::refreshContactBadge(const QString& name)
+{
+    const QString trimmed = name.trimmed();
+    if (trimmed.isEmpty() || !m_contacts)
+        return;
+
+    for (int i = 0; i < m_contacts->count(); ++i)
+    {
+        auto* it = m_contacts->item(i);
+        if (!it) continue;
+        const QString key = it->data(Qt::UserRole).toString();
+        if (key.compare(trimmed, Qt::CaseInsensitive) != 0)
+            continue;
+
+        const bool isSelf = trimmed.compare(m_client->pseudo(), Qt::CaseInsensitive) == 0;
+        const int u = isSelf ? 0 : m_unread.value(trimmed, 0);
+
+        // Preserve "(toi)" label if it exists
+        if (isSelf)
+        {
+            it->setText(QString("%1 (toi)").arg(trimmed));
+        }
+        else
+        {
+            it->setText(u > 0 ? QString("%1 (%2)").arg(trimmed).arg(u) : trimmed);
+        }
+
+        QFont f = it->font();
+        f.setBold(u > 0);
+        it->setFont(f);
+
+        if (u > 0)
+        {
+            it->setBackground(QColor(255, 245, 200)); // soft highlight
+            it->setForeground(QColor(35, 45, 70));
+        }
+        else
+        {
+            it->setBackground(QBrush());
+            it->setForeground(QBrush());
+        }
+        return;
     }
 }
 
@@ -674,6 +723,7 @@ void MainWindow::upsertContact(const QString& name, bool isSelf)
     auto* item = new QListWidgetItem(label, m_contacts);
     item->setData(Qt::UserRole, trimmed);
     item->setIcon(makeAvatarIcon(trimmed, isSelf, true));
+    item->setData(Qt::UserRole + 1, true);
 
     if (isSelf)
         m_contacts->insertItem(0, item);

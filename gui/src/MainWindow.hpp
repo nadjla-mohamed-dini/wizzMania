@@ -44,6 +44,8 @@ private:
     void appendSystem(const QString& html);
     void appendChatLine(const QString& author, const QString& content);
     void redrawConversation();
+    void refreshContactBadge(const QString& name);
+    void refreshAllContactBadges();
     void showWizzEffect(const QString& author);
     void setUiConnected(bool connected);
     void startShake();
